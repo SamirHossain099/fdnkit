@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Data / outputs (never commit private cohort data)
+*.edf
+*.h5
+*.hdf5
+data/private/
+scratch/
+*.log
+
+# Example output artifacts
+quickstart_panel.png
+examples/*.png
+*.csv
+
+# Internal planning docs: not for the public repo (contain local/private paths)
+BUILD_PLAN.md

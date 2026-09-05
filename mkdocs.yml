@@ -1,0 +1,14 @@
+site_name: FDNkit
+site_description: Fractional Dynamical Network & Multifractal toolkit for intracranial EEG
+repo_url: https://github.com/SamirHossain099/fdnkit
+theme:
+  name: readthedocs
+nav:
+  - Home: index.md
+  - Tutorial: tutorial.md
+  - API reference: api.md
+  - Methods: methods.md
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true

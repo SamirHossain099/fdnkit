@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+message: "If you use FDNkit, please cite it as below."
+title: "FDNkit: Fractional Dynamical Network & Multifractal toolkit for intracranial EEG"
+abstract: >-
+  FDNkit is an open-source Python library and command-line tool that turns
+  intracranial-EEG recordings into fractal and fractional-dynamical-network
+  features (DFA Hurst, MFDFA generalized Hurst, fractional-order dynamical
+  network coupling matrices, fractional exponents, and eigenvector hubs), with
+  plotting utilities and a classification harness that defaults to honest,
+  subject-wise cross-validation.
+type: software
+authors:
+  - family-names: Hossain
+    given-names: Samir
+    orcid: "https://orcid.org/0009-0003-8986-0946"
+    affiliation: "Department of Electrical and Computer Engineering, Texas Tech University, Lubbock, TX, USA"
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/SamirHossain099/fdnkit"
+keywords:
+  - iEEG
+  - DFA
+  - MFDFA
+  - multifractal
+  - fractional dynamics
+  - network physiology
+references:
+  - type: article
+    title: "Quantifying cognitive effort's impact on suppression of epilepsy-associated after discharges"
+    authors:
+      - family-names: Beeram
+        given-names: Sai Pavan
+      - family-names: Farris
+        given-names: Matthew
+      - family-names: Hossain
+        given-names: Samir
+      - family-names: Rethans
+        given-names: Nicholas
+      - family-names: Kang
+        given-names: Joon Y.
+      - family-names: Pereira
+        given-names: Emily A.
+    year: 2026
+    journal: "Frontiers in Network Physiology"
+    volume: "6"
+    doi: "10.3389/fnetp.2026.1768476"
