@@ -16,6 +16,14 @@ authors:
     affiliation: "Department of Electrical and Computer Engineering, Texas Tech University, Lubbock, TX, USA"
 version: 1.0.0
 date-released: "2026-09-05"
+doi: "10.5281/zenodo.22366240"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22366240"
+    description: "Concept DOI resolving to the latest version of FDNkit"
+  - type: doi
+    value: "10.5281/zenodo.22366241"
+    description: "Archived snapshot of FDNkit v1.0.0"
 license: MIT
 repository-code: "https://github.com/SamirHossain099/fdnkit"
 keywords:

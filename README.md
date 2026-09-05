@@ -5,6 +5,7 @@
 [![CI](https://github.com/SamirHossain099/fdnkit/actions/workflows/ci.yml/badge.svg)](https://github.com/SamirHossain099/fdnkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22366240.svg)](https://doi.org/10.5281/zenodo.22366240)
 
 FDNkit turns intracranial-EEG (iEEG) recordings into **fractal** and
 **fractional-dynamical-network** features and evaluates them **honestly**. It
@@ -123,8 +124,17 @@ FDNkit's numerical core is checked against ground truth (see `tests/`):
 
 ## Citation
 
-If you use FDNkit, please cite the software (see [`CITATION.cff`](CITATION.cff))
-and the methods paper:
+If you use FDNkit, please cite the software:
+
+> Hossain, S. (2026). *FDNkit: Fractional Dynamical Network & Multifractal
+> toolkit for intracranial EEG* (v1.0.0). Zenodo.
+> https://doi.org/10.5281/zenodo.22366240
+
+(`10.5281/zenodo.22366240` always resolves to the latest release; cite
+`10.5281/zenodo.22366241` for v1.0.0 specifically. See
+[`CITATION.cff`](CITATION.cff).)
+
+Please also cite the methods paper:
 
 > Beeram, S. P., Farris, M., Hossain, S., Rethans, N., Kang, J. Y., & Pereira,
 > E. A. (2026). *Quantifying cognitive effort's impact on suppression of
