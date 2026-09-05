@@ -14,7 +14,8 @@ authors:
     given-names: Samir
     orcid: "https://orcid.org/0009-0003-8986-0946"
     affiliation: "Department of Electrical and Computer Engineering, Texas Tech University, Lubbock, TX, USA"
-version: 0.1.0
+version: 1.0.0
+date-released: "2026-09-05"
 license: MIT
 repository-code: "https://github.com/SamirHossain099/fdnkit"
 keywords:
