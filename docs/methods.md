@@ -43,6 +43,19 @@ From `A`, FDNkit reports the **leading eigenvalue** (spectral radius, a
 network-gain / stability proxy), the **dominant eigenvector** magnitude
 (per-channel hub scores), and **sparseness** (fraction of appreciable edges).
 
+## A note on negative `q`
+
+Negative moment orders probe small-fluctuation regions and are numerically
+fragile: a segment with near-zero detrended variance is weighted as
+`[F^2]^(-|q|/2)` and can dominate `F_q(s)`, producing a spuriously broad
+spectrum. This is a documented failure mode (Ludescher et al. 2011; arXiv:2603.04609),
+and the usual remedies are to restrict to positive `q`, narrow `|q|`, or drop the
+smallest scales. FDNkit applies a milder scale-relative floor on each segment's
+fluctuation (`rel_floor`, default `1e-3`, set to `0` to disable), which keeps
+negative `q` usable without perturbing well-behaved signals. If your conclusions
+depend on negative `q`, validate them against surrogates as that literature
+recommends.
+
 ## Honest evaluation
 
 Because trials from one patient are highly self-similar, evaluating a classifier

@@ -20,13 +20,20 @@ original single-purpose research tool and records what changed.
 
 - `log2(0)` / divide-by-zero warnings in DFA/MFDFA: handled with `eps` flooring
   and finite-value masking in the log–log regression.
-- **Negative-`q` MFDFA blow-up on real (integer-quantized) recordings**: the
-  original machine-epsilon RMS floor let degenerately-detrended segments collapse
-  to ~0 and dominate negative-`q` moments, fabricating a huge multifractal width
-  (observed `Δh ≈ 10` on real EEG). Replaced with a **scale-relative floor**
-  (`rel_floor`, a fraction of each scale's median fluctuation, default `1e-3`);
-  this restores physical `Δh` on real data while leaving synthetic results
-  (cascade `Δh`, monofractal `Δh`, Hurst recovery) numerically unchanged.
+- **Negative-`q` MFDFA instability on real recordings**: the original
+  machine-epsilon RMS floor let near-zero-variance segments dominate negative-`q`
+  moments, producing implausibly large multifractal widths on real EEG. This is a
+  **known failure mode**, not a discovery of this project: a segment with (near)
+  zero detrended variance makes `F_q(s)` diverge for `q < 0`. See Ludescher et al.
+  (2011, *Physica A*) and arXiv:2603.04609, which identifies the zero-local-variance
+  mechanism directly. The usual published remedies are to restrict to positive `q`,
+  narrow `|q|`, or drop the smallest scales. FDNkit instead applies a milder
+  scale-relative floor (`rel_floor`, a fraction of each scale's median fluctuation,
+  default `1e-3`), which keeps negative `q` usable, restores physical `Δh` on real
+  data, and leaves synthetic results (cascade `Δh`, monofractal `Δh`, Hurst
+  recovery) numerically unchanged. Set `rel_floor=0` for the unguarded behaviour.
+  Note that the effect is *not* reproduced by simply quantizing synthetic fGn, so
+  the precise property of real recordings that triggers it is not characterized here.
 - FODN order-estimation `log2` of zero variance: floored at `1e-10` (as in the
   source) and documented.
 - Rank-deficient heuristic `B` matrix previously raised: now falls back to a

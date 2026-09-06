@@ -123,10 +123,11 @@ within a few hundredths; white noise yields `H ≈ 0.5` and Brownian motion
 `H ≈ 1.5`. MFDFA returns a wide `h(q)` for a multiplicative binomial cascade and
 a narrow one for a monofractal signal, and `h(q=2)` matches the DFA Hurst
 exponent to numerical precision. The FODN estimator recovers finite fractional
-orders, coupling matrices, and hub scores on synthetic coupled systems. A
-scale-relative fluctuation floor keeps the negative-`q` moments stable on real,
-integer-quantized recordings, where degenerate segments would otherwise inflate
-the apparent multifractal width, without perturbing well-behaved signals. These
+orders, coupling matrices, and hub scores on synthetic coupled systems. Negative
+`q` moments in MFDFA are known to be destabilized by segments of near-zero
+detrended variance, a documented source of spurious multifractality
+[@Ludescher2011]; `FDNkit` guards against this with an optional scale-relative
+fluctuation floor that leaves well-behaved signals unchanged. These
 checks run in continuous integration across Python 3.9–3.12. A worked example
 (`examples/real_data_eegbci.py`) runs the full pipeline on a public EDF recording
 from the PhysioNet EEG Motor Movement/Imagery dataset [@Schalk2004; @Goldberger2000],

@@ -70,13 +70,25 @@ def _fluctuations(signal, scales, order, rel_floor: float = 1e-3):
     Returns a list whose ``i``-th entry is the array of per-segment RMS values at
     ``scales[i]`` (empty if the scale exceeds the signal length).
 
-    ``rel_floor`` sets a *scale-relative* lower bound on each RMS value. Quantized
-    or degenerately-detrended segments (common in real, integer-stored recordings,
-    especially at small scales) can drive a segment's RMS to ~0; raised to a
-    negative moment ``q`` this dominates ``F_q(s)`` and fabricates a huge apparent
-    multifractal width. Flooring at ``rel_floor * median(RMS)`` for the scale --
-    rather than at machine epsilon -- tames this without perturbing well-behaved
-    (e.g. synthetic) signals, whose fluctuations never approach the floor.
+    ``rel_floor`` sets a *scale-relative* lower bound on each RMS value.
+
+    This guards a documented failure mode of MFDFA rather than a novel one. A
+    segment whose detrended variance is (near) zero makes ``F_q(s)`` diverge for
+    ``q < 0``, because the negative moment weights it as ``[F^2]^(-|q|/2)``; a
+    single such segment can dominate the sum and produce a spuriously broad
+    singularity spectrum. This is well described in the spurious-multifractality
+    literature -- see e.g. Ludescher et al. (2011, *Physica A*) on spurious and
+    corrupted multifractality, and the finite-size/discreteness analysis in
+    arXiv:2603.04609, which identifies exactly this zero-local-variance mechanism.
+
+    Standard remedies in that literature are to restrict the analysis to positive
+    ``q``, narrow ``|q|``, or drop the smallest scales. Flooring each segment at
+    ``rel_floor * median(RMS)`` for its scale is a milder alternative that keeps
+    negative ``q`` usable; it does not perturb well-behaved signals, whose
+    fluctuations never approach the floor. Set ``rel_floor=0`` to disable it and
+    reproduce the unguarded behaviour. Users relying on negative ``q`` should still
+    validate against surrogates (phase randomization, shuffling) as recommended in
+    that literature.
     """
     eps = np.finfo(float).eps
     x = np.asarray(signal, dtype=float)
@@ -139,8 +151,9 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3) 
     rel_floor : float
         Scale-relative floor on per-segment fluctuations, as a fraction of the
         median fluctuation at each scale. Guards the negative-``q`` moments
-        against degenerate near-zero segments in real (e.g. integer-quantized)
-        recordings; set to 0 to disable. Does not affect well-behaved signals.
+        against near-zero-variance segments, a documented cause of spurious
+        multifractality; set to 0 to disable. Does not affect well-behaved
+        signals. See :func:`_fluctuations` for references.
 
     Returns
     -------
