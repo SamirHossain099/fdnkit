@@ -24,7 +24,7 @@ Quickstart
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from .dfa import DFAResult, dfa, hurst
 from .features import (
@@ -43,7 +43,14 @@ from .mfdfa import (
     mfdfa,
     multifractal_spectrum,
 )
-from .preprocessing import flag_bad_channels, segment, sliding_windows, zscore
+from .preprocessing import (
+    find_flat_runs,
+    flag_bad_channels,
+    flat_fraction,
+    segment,
+    sliding_windows,
+    zscore,
+)
 from .synthetic import binomial_cascade, fbm, fgn, synthetic_ieeg
 
 __all__ = [
@@ -72,6 +79,8 @@ __all__ = [
     # preprocessing
     "zscore",
     "flag_bad_channels",
+    "find_flat_runs",
+    "flat_fraction",
     "segment",
     "sliding_windows",
     # synthetic

@@ -4,6 +4,20 @@ All notable changes to FDNkit are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-05
+
+### Added
+- `fdnkit.preprocessing.find_flat_runs` and `flat_fraction`: locate constant
+  runs (amplifier saturation, clipping, dropped or interpolated samples) and
+  report the fraction of samples they cover.
+- `flag_bad_channels` gains `max_flat_fraction` (default `0.05`) and
+  `flat_run_length`, so partially-flat channels are flagged, not only wholly
+  flat ones.
+- `mfdfa(..., check_flat=True)` warns when negative `q` is requested and the
+  signal contains constant runs long enough to fill an analysis segment. Such
+  runs give a segment near-zero detrended variance, which dominates negative-`q`
+  moments and can inflate the multifractal width by orders of magnitude.
+
 ## [1.0.0] - 2026-09-05
 
 Initial public release.

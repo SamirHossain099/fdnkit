@@ -1,7 +1,14 @@
 import numpy as np
 import pytest
 
-from fdnkit.preprocessing import flag_bad_channels, segment, sliding_windows, zscore
+from fdnkit.preprocessing import (
+    find_flat_runs,
+    flag_bad_channels,
+    flat_fraction,
+    segment,
+    sliding_windows,
+    zscore,
+)
 
 
 def test_zscore_unit_variance_zero_mean():
@@ -68,3 +75,53 @@ def test_segment_2d_keeps_channels():
 def test_segment_rejects_bad_window():
     with pytest.raises(ValueError):
         list(segment(np.arange(10.0), 0))
+
+
+def test_find_flat_runs_basic():
+    x = np.arange(100.0)
+    x[40:60] = x[40]
+    runs = find_flat_runs(x, min_length=10)
+    assert runs.tolist() == [[40, 60]]
+
+
+def test_find_flat_runs_none_and_all():
+    assert find_flat_runs(np.arange(100.0), min_length=10).shape == (0, 2)
+    assert find_flat_runs(np.zeros(50), min_length=10).tolist() == [[0, 50]]
+
+
+def test_find_flat_runs_respects_min_length():
+    x = np.arange(100.0)
+    x[10:15] = x[10]  # 5-sample run
+    assert find_flat_runs(x, min_length=10).shape == (0, 2)
+    assert find_flat_runs(x, min_length=4).tolist() == [[10, 15]]
+
+
+def test_find_flat_runs_multiple_and_tolerance():
+    x = np.arange(200.0)
+    x[20:40] = x[20]
+    x[100:130] = x[100]
+    assert find_flat_runs(x, min_length=10).tolist() == [[20, 40], [100, 130]]
+    y = np.arange(100.0) * 1e-15  # near-flat, not exactly flat
+    assert find_flat_runs(y, min_length=10).shape == (0, 2)
+    assert find_flat_runs(y, min_length=10, atol=1e-12).tolist() == [[0, 100]]
+
+
+def test_find_flat_runs_edge_cases():
+    assert find_flat_runs(np.array([1.0]), min_length=2).shape == (0, 2)
+    with pytest.raises(ValueError):
+        find_flat_runs(np.arange(10.0), min_length=1)
+
+
+def test_flat_fraction():
+    x = np.arange(100.0)
+    x[40:60] = x[40]
+    assert abs(flat_fraction(x, min_length=10) - 0.20) < 1e-9
+    assert flat_fraction(np.arange(100.0), min_length=10) == 0.0
+
+
+def test_flag_bad_channels_flags_partially_flat_channel():
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((4, 2000))
+    x[1, 200:600] = x[1, 200]  # 20% flat, well above the 5% default
+    assert 1 in flag_bad_channels(x)
+    assert 1 not in flag_bad_channels(x, max_flat_fraction=None)

@@ -11,6 +11,7 @@ width ``delta_h = max h(q) - min h(q)`` quantifies multifractality.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -133,7 +134,8 @@ def _loglog_slope(scales, values):
     return float(np.sum((xs - xm) * (ys - ym)) / denom)
 
 
-def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3) -> MFDFAResult:
+def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
+          check_flat: bool = True) -> MFDFAResult:
     """Run multifractal detrended fluctuation analysis on a 1-D signal.
 
     Parameters
@@ -154,6 +156,11 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3) 
         against near-zero-variance segments, a documented cause of spurious
         multifractality; set to 0 to disable. Does not affect well-behaved
         signals. See :func:`_fluctuations` for references.
+    check_flat : bool
+        When negative ``q`` values are requested, warn if the signal contains
+        constant runs long enough to fill an analysis segment (saturation,
+        clipping, dropout). Such runs are the usual practical cause of
+        implausible multifractal widths. Set to ``False`` to silence.
 
     Returns
     -------
@@ -176,6 +183,24 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3) 
         raise ValueError(
             f"signal length {x.size} too short for smallest scale {int(scales.min())}"
         )
+
+    if check_flat and np.any(q < 0):
+        from .preprocessing import find_flat_runs
+
+        runs = find_flat_runs(x, min_length=max(2, int(scales.min())))
+        if runs.size:
+            n_flat = int((runs[:, 1] - runs[:, 0]).sum())
+            warnings.warn(
+                f"signal contains {len(runs)} constant run(s) covering {n_flat} samples "
+                f"({100 * n_flat / x.size:.2f}%) at or above the smallest scale "
+                f"({int(scales.min())}). Segments inside a constant run have near-zero "
+                "detrended variance, which dominates negative-q moments and can inflate "
+                "the multifractal width by orders of magnitude. Consider removing these "
+                "runs, restricting to q > 0, or dropping the smallest scales. "
+                "Pass check_flat=False to silence.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     rms_per_scale = _fluctuations(x, scales, order, rel_floor=rel_floor)
 

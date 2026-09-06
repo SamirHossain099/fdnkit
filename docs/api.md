@@ -11,7 +11,8 @@ surface. In a Python session, `help(fdnkit.mfdfa.mfdfa)` gives full detail.
 
 ## `fdnkit.mfdfa`
 
-- `mfdfa(signal, scales=None, q=None, order=1) -> MFDFAResult`: multifractal DFA.
+- `mfdfa(signal, scales=None, q=None, order=1, rel_floor=1e-3, check_flat=True) -> MFDFAResult`:
+  multifractal DFA; warns on constant runs when negative `q` is requested.
 - `generalized_hurst(signal, ...) -> (q, hq)`: arrays only.
 - `delta_hq(signal, ...) -> float`: multifractal width.
 - `multifractal_spectrum(result) -> (alpha, f_alpha)`: Legendre transform.
@@ -58,7 +59,10 @@ surface. In a Python session, `help(fdnkit.mfdfa.mfdfa)` gives full detail.
 ## `fdnkit.preprocessing`
 
 - `zscore(signals, axis=-1)`.
-- `flag_bad_channels(signals, channel_names=None, ...) -> list[int]`.
+- `flag_bad_channels(signals, channel_names=None, *, max_flat_fraction=0.05, ...) -> list[int]`.
+- `find_flat_runs(signal, min_length=16, atol=0.0) -> ndarray` of `[start, stop)` bounds:
+  constant runs from saturation, clipping, or dropout.
+- `flat_fraction(signal, min_length=16, atol=0.0) -> float`: share of samples in such runs.
 - `segment(signals, window, *, step=None, min_size=None)`: generator of
   `(start, stop, chunk)`; `sliding_windows(...)` returns the list.
 

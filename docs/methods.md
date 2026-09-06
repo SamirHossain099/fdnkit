@@ -56,6 +56,20 @@ negative `q` usable without perturbing well-behaved signals. If your conclusions
 depend on negative `q`, validate them against surrogates as that literature
 recommends.
 
+In practice the usual trigger is a **constant run** in the recording: amplifier
+saturation, clipping, dropped or interpolated samples, or a disconnected channel.
+A flat run makes the integrated profile locally linear, so any segment inside it
+has near-zero detrended variance. The effect is severe out of proportion to its
+size: a single 32-sample flat run in a 16,384-sample series, 0.2% of the data,
+is enough to take the multifractal width from about 0.04 to above 10.
+
+FDNkit therefore screens for this. `fdnkit.preprocessing.find_flat_runs` and
+`flat_fraction` locate constant runs and quantify how much of a channel they
+cover; `flag_bad_channels` drops channels exceeding `max_flat_fraction`
+(default 5%); and `mfdfa` warns whenever negative `q` is requested on a signal
+containing runs long enough to fill a segment. Pass `check_flat=False` to
+silence that warning.
+
 ## Honest evaluation
 
 Because trials from one patient are highly self-similar, evaluating a classifier

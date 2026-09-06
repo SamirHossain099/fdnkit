@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fdnkit"
-version = "1.0.0"
+version = "1.1.0"
 description = "Fractional Dynamical Network & Multifractal toolkit for intracranial EEG"
 readme = "README.md"
 requires-python = ">=3.9"

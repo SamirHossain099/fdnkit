@@ -66,8 +66,9 @@ def test_quantized_signal_does_not_explode_delta_h():
     x = fgn(16384, 0.7, seed=5)
     quantized = np.round(x * 8) / 8.0  # coarse quantization -> many flat segments
 
-    guarded = mfdfa(quantized).delta_h            # default rel_floor=1e-3
-    unguarded = mfdfa(quantized, rel_floor=0.0).delta_h
+    # check_flat=False: this test is about the floor, not the flat-run warning.
+    guarded = mfdfa(quantized, check_flat=False).delta_h        # default rel_floor=1e-3
+    unguarded = mfdfa(quantized, rel_floor=0.0, check_flat=False).delta_h
 
     assert np.isfinite(guarded)
     assert guarded < 3.0, f"guarded delta_h unexpectedly large: {guarded}"
@@ -78,3 +79,40 @@ def test_rel_floor_preserves_clean_signal():
     # On a well-behaved signal the floor never binds: results match rel_floor=0.
     x = fgn(8192, 0.6, seed=2)
     assert abs(mfdfa(x).delta_h - mfdfa(x, rel_floor=0.0).delta_h) < 1e-9
+
+
+def test_warns_on_flat_runs_with_negative_q():
+    import warnings
+
+    x = fgn(16384, 0.7, seed=1)
+    x[5000:5032] = x[5000]  # one flat run, as from dropout or saturation
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        mfdfa(x)
+    assert any(issubclass(rec.category, RuntimeWarning) for rec in w)
+    assert "constant run" in str(w[0].message)
+
+
+def test_no_flat_warning_when_clean_or_positive_q_only():
+    import warnings
+
+    clean = fgn(8192, 0.7, seed=2)
+    flat = clean.copy()
+    flat[1000:1064] = flat[1000]
+    for sig, kwargs in ((clean, {}), (flat, {"q": [1, 2, 3]}), (flat, {"check_flat": False})):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            mfdfa(sig, **kwargs)
+        assert not [r for r in w if issubclass(r.category, RuntimeWarning)]
+
+
+def test_flat_run_inflates_delta_h_when_unguarded():
+    # Documents the failure mode the QC step exists to catch.
+    x = fgn(16384, 0.7, seed=1)
+    flat = x.copy()
+    flat[5000:5032] = flat[5000]
+    scales = [8, 16, 32, 64, 128, 256]
+    q = [-5, -3, -1, 1, 3, 5]
+    clean_dh = mfdfa(x, scales=scales, q=q, rel_floor=0.0, check_flat=False).delta_h
+    flat_dh = mfdfa(flat, scales=scales, q=q, rel_floor=0.0, check_flat=False).delta_h
+    assert flat_dh > 10 * clean_dh
