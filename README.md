@@ -3,7 +3,7 @@
 **Fractional Dynamical Network & Multifractal toolkit for intracranial EEG**
 
 [![CI](https://github.com/SamirHossain099/fdnkit/actions/workflows/ci.yml/badge.svg)](https://github.com/SamirHossain099/fdnkit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/SamirHossain099/fdnkit/blob/main/LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22366240.svg)](https://doi.org/10.5281/zenodo.22366240)
 
@@ -132,7 +132,7 @@ If you use FDNkit, please cite the software:
 
 (`10.5281/zenodo.22366240` always resolves to the latest release; cite
 `10.5281/zenodo.22366241` for v1.0.0 specifically. See
-[`CITATION.cff`](CITATION.cff).)
+[`CITATION.cff`](https://github.com/SamirHossain099/fdnkit/blob/main/CITATION.cff).)
 
 Please also cite the methods paper:
 
@@ -143,6 +143,6 @@ Please also cite the methods paper:
 
 ## License
 
-MIT; see [LICENSE](LICENSE). The underlying fractional-dynamical-network method
+MIT; see [LICENSE](https://github.com/SamirHossain099/fdnkit/blob/main/LICENSE). The underlying fractional-dynamical-network method
 is due to Gupta, Pequito & Bogdan (2018) and Xue & Bogdan (2017); please cite
 them when using the FODN module.
