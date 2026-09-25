@@ -4,6 +4,25 @@ All notable changes to FDNkit are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Regression tests pinning the scale invariance of `h(q)`. Multiplying a signal
+  by a positive constant cannot change its scaling exponents, and `rel_floor`
+  is what makes that hold: the floor tracks the median positive fluctuation at
+  each scale instead of sitting at a fixed value. The tests cover a clean
+  fractional Gaussian noise signal, white noise against its known `h(q=2)`, and
+  a signal carrying a constant run where an absolute floor drifts by about 4.0
+  across twelve orders of magnitude of input scaling while the relative floor
+  drifts by about 1.6e-4.
+- `CODE_OF_CONDUCT.md`, adapted from the Contributor Covenant 2.1.
+
+### Changed
+- CI now runs on Linux, Windows and macOS rather than Linux alone, and adds
+  Python 3.13. Windows matters here specifically: NumPy's default integer is
+  32-bit there, which is the kind of platform difference that silently changes
+  numerical results rather than raising.
+
 ## [1.1.0] - 2026-09-05
 
 ### Added
