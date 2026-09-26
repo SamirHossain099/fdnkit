@@ -77,12 +77,12 @@ def mfdfa_features(signals, scales=None, q=None, order: int = 1, prefix: str = "
         hq_all.append(finite)
     if not hq_means:
         return {}
-    hq_all = np.concatenate(hq_all)
+    hq_pooled = np.concatenate(hq_all)
     return {
         f"{prefix}_Hq_mean": float(np.mean(hq_means)),
         f"{prefix}_Hq_std": float(np.std(hq_means)),
         f"{prefix}_delta_h_mean": float(np.nanmean(deltas)),
-        f"{prefix}_Hq_grand_mean": float(hq_all.mean()),
+        f"{prefix}_Hq_grand_mean": float(hq_pooled.mean()),
     }
 
 

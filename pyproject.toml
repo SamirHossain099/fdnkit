@@ -51,6 +51,7 @@ dev = [
     "matplotlib>=3.5",
     "h5py>=3.0",
     "ruff>=0.1",
+    "mypy>=1.8",
 ]
 
 [project.scripts]
@@ -71,6 +72,12 @@ addopts = "-q"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+
+[tool.mypy]
+# The package ships a py.typed marker, so its annotations are visible to every downstream
+# type checker. This check keeps them honest. Dependencies without bundled types (pandas,
+# scikit-learn, mne, h5py) resolve to Any rather than failing the run.
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

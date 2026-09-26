@@ -9,6 +9,8 @@ analysis windows.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import numpy as np
 
 __all__ = ["zscore", "flag_bad_channels", "find_flat_runs", "flat_fraction",
@@ -167,7 +169,9 @@ def flag_bad_channels(
     return sorted(bad)
 
 
-def segment(signals, window: int, *, step: int = None, min_size: int = None):
+def segment(
+    signals, window: int, *, step: int | None = None, min_size: int | None = None
+) -> Iterator[tuple[int, int, np.ndarray]]:
     """Cut a signal into non-overlapping (or strided) windows along time.
 
     Parameters
@@ -205,6 +209,8 @@ def segment(signals, window: int, *, step: int = None, min_size: int = None):
         start += step
 
 
-def sliding_windows(signals, window: int, *, step: int = None, min_size: int = None):
+def sliding_windows(
+    signals, window: int, *, step: int | None = None, min_size: int | None = None
+) -> list[tuple[int, int, np.ndarray]]:
     """List form of :func:`segment` -- returns ``[(start, stop, chunk), ...]``."""
     return list(segment(signals, window, step=step, min_size=min_size))

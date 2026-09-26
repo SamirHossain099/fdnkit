@@ -16,12 +16,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   across twelve orders of magnitude of input scaling while the relative floor
   drifts by about 1.6e-4.
 - `CODE_OF_CONDUCT.md`, adapted from the Contributor Covenant 2.1.
+- A `py.typed` marker (PEP 561), so mypy and pyright now read FDNkit's inline
+  annotations instead of treating the whole API as `Any`. A test checks that the
+  marker ships with the package.
+
+### Fixed
+- Type hints that would have been wrong once visible downstream.
+  `segment` and `sliding_windows` declared `step: int = None` and
+  `min_size: int = None`, so a user passing the documented default `step=None`
+  would get a false error from their type checker. They are now `int | None`,
+  and both functions declare their return types. `mfdfa_features` reused one
+  variable name for a list and an array; the array now has its own name.
 
 ### Changed
 - CI now runs on Linux, Windows and macOS rather than Linux alone, and adds
   Python 3.13. Windows matters here specifically: NumPy's default integer is
   32-bit there, which is the kind of platform difference that silently changes
   numerical results rather than raising.
+- CI now type-checks the package with mypy, and `mypy` joins the `dev` extras.
+  With the marker in place the annotations are part of the public contract, so
+  they need a check that keeps them accurate.
 
 ## [1.1.0] - 2026-09-05
 
