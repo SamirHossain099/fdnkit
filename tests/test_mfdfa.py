@@ -182,3 +182,14 @@ def test_relative_floor_contains_drift_that_an_absolute_floor_does_not():
     assert guarded < 1e-2, f"the relative floor let h(q) drift by {guarded:.3g}"
     assert unguarded > 1.0, f"expected the absolute fallback to drift badly, got {unguarded:.3g}"
     assert unguarded > 100 * guarded
+
+
+def test_mfdfa_rejects_scales_the_polynomial_fits_exactly():
+    # Same guard as dfa: below order + 2 the detrended residual is rounding error,
+    # which inflated every h(q) to about 3.5 to 4 on a signal with H = 0.7.
+    x = fgn(8000, 0.7, seed=0)
+    with pytest.raises(ValueError, match=r"order \+ 2 = 5"):
+        mfdfa(x, order=3)
+    res = mfdfa(x, scales=[8, 16, 32, 64, 128, 256], order=3)
+    assert abs(res.hurst - 0.7) < 0.1
+    assert np.all(res.fluct > 1e-6)

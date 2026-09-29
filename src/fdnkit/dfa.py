@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .mfdfa import DEFAULT_SCALES, _fluctuations, _loglog_slope
+from .mfdfa import DEFAULT_SCALES, _fluctuations, _loglog_slope, _validate_scales
 
 __all__ = ["DFAResult", "dfa", "hurst"]
 
@@ -47,9 +47,12 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     signal : array-like
         1-D time series.
     scales : array-like, optional
-        Window sizes in samples. Defaults to the standard FDNkit grid.
+        Window sizes in samples. Defaults to the standard FDNkit grid, which
+        starts at 4. Every scale must be at least ``order + 2``.
     order : int
-        Detrending polynomial order (1 = linear).
+        Detrending polynomial order (1 = linear). With ``order >= 3`` pass
+        ``scales`` explicitly, since the default grid starts below
+        ``order + 2``.
     rel_floor : float
         Scale-relative floor on per-segment fluctuations (see
         :func:`fdnkit.mfdfa.mfdfa`). Has negligible effect on the (positive-moment)
@@ -59,6 +62,12 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     -------
     DFAResult
 
+    Raises
+    ------
+    ValueError
+        If any scale is below ``order + 2``, or the signal is shorter than twice
+        the smallest scale.
+
     Examples
     --------
     >>> from fdnkit.synthetic import fgn
@@ -66,7 +75,7 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     >>> H = dfa(fgn(8000, 0.7, seed=0)).hurst  # ~0.7
     """
     eps = np.finfo(float).eps
-    scales = DEFAULT_SCALES if scales is None else np.asarray(scales, dtype=int)
+    scales = _validate_scales(DEFAULT_SCALES if scales is None else scales, order)
     x = np.asarray(signal, dtype=float).ravel()
     if x.size < int(scales.min()) * 2:
         raise ValueError(

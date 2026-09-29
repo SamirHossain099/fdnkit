@@ -65,6 +65,33 @@ class MFDFAResult:
         return float(self.hq[idx])
 
 
+def _validate_scales(scales, order: int) -> np.ndarray:
+    """Return ``scales`` as an integer array, rejecting windows too short to detrend.
+
+    A polynomial of order ``m`` has ``m + 1`` coefficients, so it passes exactly
+    through any window of ``m + 1`` samples or fewer. The detrended residual is
+    then rounding error rather than signal, the fluctuation at that scale
+    collapses to about ``1e-14``, and the log-log slope is dragged far from the
+    true exponent. Kantelhardt et al. (2002) require ``s >= m + 2`` for this
+    reason.
+    """
+    scales = np.asarray(scales, dtype=int)
+    if scales.ndim != 1 or scales.size == 0:
+        raise ValueError("scales must be a non-empty 1-D sequence of window sizes")
+    if order < 0:
+        raise ValueError(f"order must be non-negative, got {order}")
+    min_scale = int(order) + 2
+    too_small = scales[scales < min_scale]
+    if too_small.size:
+        raise ValueError(
+            f"scales {too_small.tolist()} are too small for detrending order {order}: "
+            f"a polynomial of order {order} fits a window of {int(order) + 1} samples or "
+            f"fewer exactly, leaving no fluctuation to measure. Every scale must be at "
+            f"least order + 2 = {min_scale}."
+        )
+    return scales
+
+
 def _fluctuations(signal, scales, order, rel_floor: float = 1e-3):
     """Local detrended RMS fluctuations for each scale (q=2 base quantities).
 
@@ -145,11 +172,14 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     scales : array-like, optional
         Window sizes (in samples). Defaults to
         ``[4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]``. Every scale
-        should be smaller than ``len(signal)``.
+        should be smaller than ``len(signal)`` and must be at least
+        ``order + 2``.
     q : array-like, optional
         Moment orders. Defaults to ``[-5, -3, -2, -1, 0, 1, 2, 3, 5]``.
     order : int
-        Order of the polynomial used to detrend each segment (1 = linear).
+        Order of the polynomial used to detrend each segment (1 = linear). The
+        default scales start at 4, so ``order >= 3`` needs an explicit
+        ``scales`` whose smallest entry is at least ``order + 2``.
     rel_floor : float
         Scale-relative floor on per-segment fluctuations, as a fraction of the
         median fluctuation at each scale. Guards the negative-``q`` moments
@@ -166,6 +196,12 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     -------
     MFDFAResult
 
+    Raises
+    ------
+    ValueError
+        If any scale is below ``order + 2``, or the signal is shorter than twice
+        the smallest scale.
+
     Notes
     -----
     Follows Kantelhardt et al. (2002) with a forward (non-overlapping) segment
@@ -174,8 +210,7 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     ``F_0(s) = exp(0.5 * mean(log RMS^2))``.
     """
     eps = np.finfo(float).eps
-    scales = DEFAULT_SCALES if scales is None else np.asarray(scales)
-    scales = np.asarray(scales, dtype=int)
+    scales = _validate_scales(DEFAULT_SCALES if scales is None else scales, order)
     q = DEFAULT_Q if q is None else np.asarray(q, dtype=float)
 
     x = np.asarray(signal, dtype=float).ravel()

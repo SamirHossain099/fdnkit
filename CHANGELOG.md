@@ -21,6 +21,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   marker ships with the package.
 
 ### Fixed
+- `dfa` and `mfdfa` now raise a `ValueError` when a scale is smaller than
+  `order + 2`. A polynomial of order `m` fits a window of `m + 1` samples
+  exactly, so the fluctuation at that scale was rounding error (about `1e-14`)
+  and it dominated the log-log fit. With `order=3` and the default scales, a
+  fractional Gaussian noise signal with `H = 0.7` returned `H = 3.6`, with no
+  error and no warning from FDNkit. Scales of zero or below, which previously
+  surfaced as a `ZeroDivisionError` or a failed SVD, are rejected by the same
+  check. The default scales are unchanged and remain valid for `order` 1 and 2;
+  `order >= 3` now needs explicit `scales`.
 - Type hints that would have been wrong once visible downstream.
   `segment` and `sliding_windows` declared `step: int = None` and
   `min_size: int = None`, so a user passing the documented default `step=None`

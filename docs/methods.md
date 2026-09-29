@@ -9,6 +9,13 @@ polynomial trend in each window, and measures the root-mean-square residual
 Values `H ≈ 0.5` indicate white noise, `H > 0.5` persistent (long-range)
 correlations, and `H > 1` non-stationary (motion-like) behavior.
 
+Every window must hold at least `order + 2` samples. A polynomial of order `m`
+passes exactly through `m + 1` points, so a shorter window leaves a residual of
+rounding error instead of a fluctuation, and the fitted slope is no longer an
+estimate of `H`. `dfa` and `mfdfa` raise a `ValueError` for such scales. The
+default scales start at 4, which suits `order` 1 and 2; for `order >= 3` pass
+`scales` explicitly.
+
 ## Multifractal DFA (MFDFA)
 
 MFDFA generalizes the second step to arbitrary moment orders `q`:
