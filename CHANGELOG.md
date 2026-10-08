@@ -30,6 +30,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   surfaced as a `ZeroDivisionError` or a failed SVD, are rejected by the same
   check. The default scales are unchanged and remain valid for `order` 1 and 2;
   `order >= 3` now needs explicit `scales`.
+- Non-integer `scales` are now rounded to the nearest window instead of
+  truncated. Log-spaced grids carry rounding error:
+  `np.geomspace(4, 256, 7)` returns `7.999999999999999` for 8, so `dfa` and
+  `mfdfa` analysed windows of 7, 31, 63 and 127 samples instead of 8, 32, 64
+  and 128, reported those in `result.scales`, and shifted `H` by about 0.003
+  on fractional Gaussian noise. Because the error sits in the last bit of a
+  floating-point result, which grid a user got could depend on the platform's
+  maths library. Non-finite scales are rejected with a `ValueError`; an
+  infinite scale previously escaped as an `OverflowError`.
 - Type hints that would have been wrong once visible downstream.
   `segment` and `sliding_windows` declared `step: int = None` and
   `min_size: int = None`, so a user passing the documented default `step=None`

@@ -64,7 +64,18 @@ def test_dfa_accepts_the_smallest_valid_scale():
     assert np.all(res.fluct > 1e-6)
 
 
-@pytest.mark.parametrize("scales", [[0, 4, 8], [-4, 8, 16], [], [[4, 8], [16, 32]]])
+def test_float_scales_round_to_the_nearest_window():
+    # np.geomspace(4, 256, 7) returns 7.999999999999999 for 8, 31.99999999999999
+    # for 32 and so on. Truncating those analysed windows one sample short of the
+    # grid the user asked for, so the scales must be rounded instead.
+    grid = np.geomspace(4, 256, 7)
+    assert np.any(grid != np.rint(grid)), "test needs a grid with rounding error"
+    res = dfa(fgn(4096, 0.7, seed=0), scales=grid)
+    np.testing.assert_array_equal(res.scales, [4, 8, 16, 32, 64, 128, 256])
+
+
+@pytest.mark.parametrize("scales", [[0, 4, 8], [-4, 8, 16], [], [[4, 8], [16, 32]],
+                                    [4, 8, np.nan], [4, 8, np.inf]])
 def test_dfa_rejects_malformed_scales(scales):
     with pytest.raises(ValueError):
         dfa(fgn(1024, 0.7, seed=0), scales=scales)

@@ -74,10 +74,20 @@ def _validate_scales(scales, order: int) -> np.ndarray:
     collapses to about ``1e-14``, and the log-log slope is dragged far from the
     true exponent. Kantelhardt et al. (2002) require ``s >= m + 2`` for this
     reason.
+
+    Scales are rounded to the nearest integer, not truncated. Log-spaced grids
+    built with ``np.geomspace`` or ``np.logspace`` land a rounding error away
+    from their integer targets (``np.geomspace(4, 256, 7)`` yields
+    ``7.999999999999999`` for 8), and truncation would analyse windows of 7, 31
+    and 63 samples instead of 8, 32 and 64, depending on the last bit of the
+    floating-point arithmetic.
     """
-    scales = np.asarray(scales, dtype=int)
+    scales = np.asarray(scales, dtype=float)
     if scales.ndim != 1 or scales.size == 0:
         raise ValueError("scales must be a non-empty 1-D sequence of window sizes")
+    if not np.all(np.isfinite(scales)):
+        raise ValueError(f"scales must be finite, got {scales.tolist()}")
+    scales = np.rint(scales).astype(int)
     if order < 0:
         raise ValueError(f"order must be non-negative, got {order}")
     min_scale = int(order) + 2
