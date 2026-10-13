@@ -15,8 +15,11 @@ The model underlies the "fractional dynamical network" features in Beeram et al.
 (2026, *Front. Netw. Physiol.* 6:1768476); the underlying method is due to
 Gupta, Pequito & Bogdan (2018) and Xue & Bogdan (2017).
 
-The heavy inner loop is unchanged from the validated source; the public surface
-(:class:`FODN`, :func:`fit_fodn`, :class:`FODNResult`) is new.
+The numerical procedure is unchanged from the validated source. The one structural
+difference is that the ADMM-LASSO step solves every timepoint's unknown-input problem
+in a single batch rather than one timepoint at a time; each column still follows the
+serial iteration exactly (see :meth:`FODN._lasso`). The public surface (:class:`FODN`,
+:func:`fit_fodn`, :class:`FODNResult`) is new.
 """
 
 from __future__ import annotations
@@ -224,40 +227,66 @@ class FODN:
             self.l_inv = LA.inv(self.l)
             self.u_inv = LA.inv(self.u)
 
-    def _lasso(self, b_vec, lambda_):
+    def _lasso(self, b_mat, lambda_):
+        """ADMM-LASSO unknown-input estimate for one or many residual vectors.
+
+        ``b_mat`` is either a single residual of length ``n_channels`` or a
+        ``(n_channels, n_timepoints)`` array holding one residual per column. The
+        columns are independent problems that share the matrix ``self._b`` and its
+        factorisation, so they are iterated together. To keep the batched result
+        identical to solving the columns one at a time, each column is removed
+        from the active set as soon as its own stopping rule fires and is not
+        touched again; a column therefore takes exactly the number of ADMM steps
+        it would take on its own, and every arithmetic step it sees is the same.
+        The output agrees with the serial formulation to floating-point rounding.
+        """
         a = self._b
-        b_vec = np.reshape(b_vec, (np.size(b_vec), 1))
+        b_mat = np.asarray(b_mat, dtype=float)
+        single = b_mat.ndim == 1
+        if single:
+            b_mat = b_mat[:, None]
         max_iter, abstol, reltol = 100, 1e-4, 1e-2
         m, n = np.shape(a)
-        atb = np.matmul(a.T, b_vec)
+        n_cols = b_mat.shape[1]
+        atb = np.matmul(a.T, b_mat)
         rho = 1 / lambda_
         alpha = 1.0
 
-        z = np.zeros((n, 1))
-        u = np.zeros((n, 1))
+        z = np.zeros((n, n_cols))
+        u = np.zeros((n, n_cols))
         l_inv, u_inv = self._pre.l_inv, self._pre.u_inv
+        if m < n:
+            u_fac, l_fac = LA.inv(u_inv), LA.inv(l_inv)
 
+        active = np.arange(n_cols)
         for _ in range(max_iter):
-            q = atb + rho * (z - u)
+            z_old = z[:, active]
+            u_act = u[:, active]
+            q = atb[:, active] + rho * (z_old - u_act)
             if m >= n:
                 x = np.matmul(u_inv, np.matmul(l_inv, q))
             else:
                 x = q / rho - np.matmul(
-                    a.T, np.matmul(LA.inv(u_inv), np.matmul(LA.inv(l_inv), np.matmul(a, q)))
+                    a.T, np.matmul(u_fac, np.matmul(l_fac, np.matmul(a, q)))
                 ) / rho**2
 
-            z_old = np.array(z)
             x_hat = alpha * x + (1 - alpha) * z_old
-            z = self._shrinkage(x_hat + u, lambda_ / rho)
-            u += x_hat - z
+            z_new = self._shrinkage(x_hat + u_act, lambda_ / rho)
+            u_new = u_act + (x_hat - z_new)
+            z[:, active] = z_new
+            u[:, active] = u_new
 
-            r_norm = LA.norm(x - z)
-            s_norm = LA.norm(-rho * (z - z_old))
-            eps_pri = np.sqrt(n) * abstol + reltol * np.max((LA.norm(x), LA.norm(-z)))
-            eps_dual = np.sqrt(n) * abstol + reltol * LA.norm(rho * u)
-            if r_norm < eps_pri and s_norm < eps_dual:
+            r_norm = np.linalg.norm(x - z_new, axis=0)
+            s_norm = np.linalg.norm(-rho * (z_new - z_old), axis=0)
+            eps_pri = np.sqrt(n) * abstol + reltol * np.maximum(
+                np.linalg.norm(x, axis=0), np.linalg.norm(-z_new, axis=0)
+            )
+            eps_dual = np.sqrt(n) * abstol + reltol * np.linalg.norm(rho * u_new, axis=0)
+            converged = (r_norm < eps_pri) & (s_norm < eps_dual)
+            active = active[~converged]
+            if active.size == 0:
                 break
-        return np.squeeze(z)
+        return z[:, 0] if single else z
 
     # ---- public API ---------------------------------------------------------
     def fit(self, x):
@@ -292,9 +321,11 @@ class FODN:
         if self.verbose:
             print(f"beginning mse = {mse:.6f}")
         for it in range(self.n_iter):
-            for k in range(1, self._k):
-                residual = self._z[:, k] - np.matmul(self._a_hist[it], x[:, k - 1])
-                self._u[:, k] = self._lasso(residual, self.lambda_)
+            # One residual column per timepoint k >= 1 (timepoint 0 has no
+            # predecessor and its unknown input stays zero). The columns are
+            # independent problems, solved together in one batched ADMM call.
+            residual = self._z[:, 1:] - np.matmul(self._a_hist[it], x[:, :-1])
+            self._u[:, 1:] = self._lasso(residual, self.lambda_)
             self._a_hist[it + 1], mse = self._least_squares(
                 (self._z - np.matmul(self._b, self._u)).T, x.T
             )

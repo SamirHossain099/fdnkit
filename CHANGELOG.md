@@ -47,6 +47,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   variable name for a list and an array; the array now has its own name.
 
 ### Changed
+- `FODN.fit` solves the ADMM-LASSO unknown-input step for every timepoint in
+  one batch instead of one timepoint at a time. The per-timepoint problems share
+  a single matrix and are independent, so the batched solver follows the
+  validated serial iteration exactly: each column takes the same number of ADMM
+  steps it would take alone and is frozen the moment its own stopping rule
+  fires. On synthetic signals the unknown inputs agree with the serial code to
+  about 1e-14 and the coupling matrices to about 1e-16, and a test pins that
+  agreement column by column against the serial code kept as the oracle. An
+  8-channel, 5000-sample fit with ten refinement iterations drops from about
+  19 s to about 0.1 s, and step 3 of the tutorial, a 48-trial feature table,
+  from about six minutes to under 40 s, the remainder being the MFDFA pass.
+  The slow fit was the first thing a new user met, and it made FODN look far
+  more expensive than it is.
 - CI now runs on Linux, Windows and macOS rather than Linux alone, and adds
   Python 3.13. Windows matters here specifically: NumPy's default integer is
   32-bit there, which is the kind of platform difference that silently changes
