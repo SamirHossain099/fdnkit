@@ -16,6 +16,14 @@ estimate of `H`. `dfa` and `mfdfa` raise a `ValueError` for such scales. The
 default scales start at 4, which suits `order` 1 and 2; for `order >= 3` pass
 `scales` explicitly.
 
+A scale larger than the signal has no window to measure, so it is skipped: its
+fluctuation is `nan` and the slope is fitted on the scales that fit. Both
+functions issue a `RuntimeWarning` naming the skipped scales, because the
+exponent is then estimated from a grid the user did not ask for. The default
+grid reaches 256 samples, so a one-second window needs a sampling rate of at
+least 256 Hz to use it in full; shorter windows should pass a smaller `scales`.
+Fewer than two usable scales leave no slope to fit and raise a `ValueError`.
+
 ## Multifractal DFA (MFDFA)
 
 MFDFA generalizes the second step to arbitrary moment orders `q`:

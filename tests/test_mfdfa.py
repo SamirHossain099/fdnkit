@@ -193,3 +193,27 @@ def test_mfdfa_rejects_scales_the_polynomial_fits_exactly():
     res = mfdfa(x, scales=[8, 16, 32, 64, 128, 256], order=3)
     assert abs(res.hurst - 0.7) < 0.1
     assert np.all(res.fluct > 1e-6)
+
+
+def test_mfdfa_warns_when_a_scale_exceeds_the_signal():
+    import warnings
+
+    # Same contract as dfa: skipped scales are reported, left nan in both
+    # fluctuation tables, and the exponents match the fit on the scales that fit.
+    x = fgn(4096, 0.7, seed=3)[:160]
+    with pytest.warns(RuntimeWarning, match=r"scales \[192, 256\] exceed the signal length 160"):
+        res = mfdfa(x)
+    fits = res.scales <= 160
+    assert np.isnan(res.fluct[~fits]).all()
+    assert np.isnan(res.fluct_q[:, ~fits]).all()
+    assert np.isfinite(res.fluct_q[:, fits]).all()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        ref = mfdfa(x, scales=res.scales[fits])
+    np.testing.assert_allclose(res.hq, ref.hq, atol=1e-12)
+    assert res.hurst == pytest.approx(ref.hurst, abs=1e-12)
+
+
+def test_mfdfa_raises_when_fewer_than_two_scales_fit():
+    with pytest.raises(ValueError, match="at least two"):
+        mfdfa(fgn(64, 0.7, seed=5), scales=[16, 100, 200])

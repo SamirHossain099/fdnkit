@@ -15,7 +15,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .mfdfa import DEFAULT_SCALES, _fluctuations, _loglog_slope, _validate_scales
+from .mfdfa import (
+    DEFAULT_SCALES,
+    _check_signal_length,
+    _fluctuations,
+    _loglog_slope,
+    _validate_scales,
+)
 
 __all__ = ["DFAResult", "dfa", "hurst"]
 
@@ -48,7 +54,9 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
         1-D time series.
     scales : array-like, optional
         Window sizes in samples. Defaults to the standard FDNkit grid, which
-        starts at 4. Every scale must be at least ``order + 2``.
+        starts at 4. Every scale must be at least ``order + 2``. A scale
+        larger than the signal has no segment to measure: it is skipped with
+        a ``RuntimeWarning`` and its entry in ``fluct`` is ``nan``.
     order : int
         Detrending polynomial order (1 = linear). With ``order >= 3`` pass
         ``scales`` explicitly, since the default grid starts below
@@ -65,8 +73,14 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     Raises
     ------
     ValueError
-        If any scale is below ``order + 2``, or the signal is shorter than twice
-        the smallest scale.
+        If any scale is below ``order + 2``, the signal is shorter than twice
+        the smallest scale, or fewer than two scales fit inside the signal.
+
+    Warns
+    -----
+    RuntimeWarning
+        If any scale exceeds the signal length; that scale is skipped and the
+        exponent is fitted on the rest.
 
     Examples
     --------
@@ -77,10 +91,7 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     eps = np.finfo(float).eps
     scales = _validate_scales(DEFAULT_SCALES if scales is None else scales, order)
     x = np.asarray(signal, dtype=float).ravel()
-    if x.size < int(scales.min()) * 2:
-        raise ValueError(
-            f"signal length {x.size} too short for smallest scale {int(scales.min())}"
-        )
+    _check_signal_length(x, scales)
 
     rms_per_scale = _fluctuations(x, scales, order, rel_floor=rel_floor)
     fluct = np.full(len(scales), np.nan)

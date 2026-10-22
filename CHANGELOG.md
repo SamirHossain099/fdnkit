@@ -39,6 +39,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   floating-point result, which grid a user got could depend on the platform's
   maths library. Non-finite scales are rejected with a `ValueError`; an
   infinite scale previously escaped as an `OverflowError`.
+- `dfa` and `mfdfa` now warn when a scale is larger than the signal. Such a
+  scale has no window to measure, and both functions skipped it silently and
+  fitted the exponent on whatever remained, while `result.scales` still listed
+  the full grid. A one-second window at 160 Hz loses the two largest default
+  scales this way and reported `H` from eleven scales instead of thirteen; a
+  9-sample signal returned an exponent from three single-segment scales with
+  no sign that anything was wrong. The skipped scales are now named in a
+  `RuntimeWarning`, their fluctuations stay `nan`, and the fit on the remaining
+  scales is unchanged, so existing results are not affected. When fewer than
+  two scales fit, which left `hurst` as `nan`, both functions now raise a
+  `ValueError` instead. The length check is shared by the two functions, which
+  previously duplicated it.
 - Type hints that would have been wrong once visible downstream.
   `segment` and `sliding_windows` declared `step: int = None` and
   `min_size: int = None`, so a user passing the documented default `step=None`

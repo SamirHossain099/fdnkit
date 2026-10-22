@@ -102,6 +102,40 @@ def _validate_scales(scales, order: int) -> np.ndarray:
     return scales
 
 
+def _check_signal_length(x, scales):
+    """Check that ``x`` is long enough for ``scales`` and report the scales that do not fit.
+
+    A scale larger than the signal has no segment to measure, so its fluctuation
+    is undefined and the log-log fit proceeds on the remaining scales. That is
+    legitimate, but it must not be silent: the slope is then estimated from a
+    grid the user did not ask for, and a one-second window at 160 Hz, for
+    example, loses the two largest default scales (192 and 256) and reports its
+    exponent from eleven. A ``RuntimeWarning`` names the dropped scales. Fewer
+    than two usable scales leave no slope to fit, so that case raises instead
+    of returning ``nan``.
+    """
+    n = int(x.size)
+    smallest = int(scales.min())
+    if n < smallest * 2:
+        raise ValueError(f"signal length {n} too short for smallest scale {smallest}")
+    too_large = scales[scales > n]
+    if too_large.size:
+        kept = int(scales.size - too_large.size)
+        if kept < 2:
+            raise ValueError(
+                f"scales {too_large.tolist()} exceed the signal length {n}, leaving "
+                f"{kept} usable scale(s); at least two are needed to fit a slope."
+            )
+        warnings.warn(
+            f"scales {too_large.tolist()} exceed the signal length {n} and will be "
+            f"skipped; the exponent is fitted on the {kept} remaining scale(s) "
+            f"({scales[scales <= n].tolist()}). Pass scales that fit the signal, "
+            "or use longer windows, to silence this warning.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+
 def _fluctuations(signal, scales, order, rel_floor: float = 1e-3):
     """Local detrended RMS fluctuations for each scale (q=2 base quantities).
 
@@ -182,8 +216,9 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     scales : array-like, optional
         Window sizes (in samples). Defaults to
         ``[4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]``. Every scale
-        should be smaller than ``len(signal)`` and must be at least
-        ``order + 2``.
+        must be at least ``order + 2``. A scale larger than ``len(signal)``
+        has no segment to measure: it is skipped with a ``RuntimeWarning``
+        and its entries in ``fluct`` and ``fluct_q`` are ``nan``.
     q : array-like, optional
         Moment orders. Defaults to ``[-5, -3, -2, -1, 0, 1, 2, 3, 5]``.
     order : int
@@ -209,8 +244,14 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     Raises
     ------
     ValueError
-        If any scale is below ``order + 2``, or the signal is shorter than twice
-        the smallest scale.
+        If any scale is below ``order + 2``, the signal is shorter than twice
+        the smallest scale, or fewer than two scales fit inside the signal.
+
+    Warns
+    -----
+    RuntimeWarning
+        If any scale exceeds the signal length (that scale is skipped), or if
+        ``check_flat`` finds constant runs and ``q`` has negative entries.
 
     Notes
     -----
@@ -224,10 +265,7 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     q = DEFAULT_Q if q is None else np.asarray(q, dtype=float)
 
     x = np.asarray(signal, dtype=float).ravel()
-    if x.size < int(scales.min()) * 2:
-        raise ValueError(
-            f"signal length {x.size} too short for smallest scale {int(scales.min())}"
-        )
+    _check_signal_length(x, scales)
 
     if check_flat and np.any(q < 0):
         from .preprocessing import find_flat_runs

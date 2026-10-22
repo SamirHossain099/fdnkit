@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 
@@ -79,3 +81,33 @@ def test_float_scales_round_to_the_nearest_window():
 def test_dfa_rejects_malformed_scales(scales):
     with pytest.raises(ValueError):
         dfa(fgn(1024, 0.7, seed=0), scales=scales)
+
+
+def test_dfa_warns_when_a_scale_exceeds_the_signal():
+    # A 160-sample window (one second at 160 Hz) cannot hold the two largest
+    # default scales. Dropping them is legitimate, but silently fitting the
+    # exponent on eleven scales instead of thirteen is not: the user must be told,
+    # and the result must equal what they would get by asking for the grid that
+    # actually fits.
+    x = fgn(4096, 0.7, seed=3)[:160]
+    with pytest.warns(RuntimeWarning, match=r"scales \[192, 256\] exceed the signal length 160"):
+        res = dfa(x)
+    fits = res.scales <= 160
+    assert np.isnan(res.fluct[~fits]).all()
+    assert np.isfinite(res.fluct[fits]).all()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        ref = dfa(x, scales=res.scales[fits])
+    assert res.hurst == pytest.approx(ref.hurst, abs=1e-12)
+
+
+def test_dfa_is_silent_when_every_scale_fits():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        dfa(fgn(256, 0.7, seed=4))  # the largest default scale equals the length
+
+
+def test_dfa_raises_when_fewer_than_two_scales_fit():
+    # One usable scale leaves no slope to fit; nan would hide that.
+    with pytest.raises(ValueError, match="at least two"):
+        dfa(fgn(64, 0.7, seed=5), scales=[16, 100, 200])
