@@ -111,3 +111,35 @@ def test_dfa_raises_when_fewer_than_two_scales_fit():
     # One usable scale leaves no slope to fit; nan would hide that.
     with pytest.raises(ValueError, match="at least two"):
         dfa(fgn(64, 0.7, seed=5), scales=[16, 100, 200])
+
+
+def test_dfa_rejects_nan_and_inf_with_a_count_and_a_position():
+    # One nan used to turn hurst and every fluctuation into nan with no
+    # message from FDNkit; the cumulative profile carries it everywhere.
+    x = fgn(2048, 0.7, seed=11)
+    x[[100, 101, 900]] = np.nan
+    x[1500] = np.inf
+    with pytest.raises(ValueError, match=r"4 non-finite sample\(s\) \(3 nan, 1 inf\)"):
+        dfa(x)
+    with pytest.raises(ValueError, match="first at index 100 of 2048"):
+        dfa(x)
+    with pytest.raises(ValueError, match="non-finite"):
+        hurst(x)
+
+
+def test_dfa_rejects_a_multichannel_array_instead_of_flattening_it():
+    # (8, 2000) was raveled into one 16000-sample series whose exponent
+    # belonged to no channel.
+    rng = np.random.default_rng(0)
+    signals = rng.standard_normal((8, 2000))
+    with pytest.raises(ValueError, match=r"must be 1-D, got shape \(8, 2000\)"):
+        dfa(signals)
+    with pytest.raises(ValueError, match="dfa_features"):
+        dfa(signals)
+
+
+def test_dfa_squeezes_singleton_axes():
+    x = fgn(2048, 0.7, seed=12)
+    expected = dfa(x).hurst
+    assert dfa(x[None, :]).hurst == expected
+    assert dfa(x[:, None]).hurst == expected

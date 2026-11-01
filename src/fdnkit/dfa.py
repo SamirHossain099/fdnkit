@@ -17,6 +17,7 @@ import numpy as np
 
 from .mfdfa import (
     DEFAULT_SCALES,
+    _as_signal,
     _check_signal_length,
     _fluctuations,
     _loglog_slope,
@@ -51,7 +52,11 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     Parameters
     ----------
     signal : array-like
-        1-D time series.
+        1-D time series of finite values. A multi-channel array is rejected
+        rather than flattened; analyse one channel at a time or use
+        :func:`fdnkit.features.dfa_features`. ``nan`` and ``inf`` are
+        rejected because the cumulative profile would carry them into every
+        window and the exponent.
     scales : array-like, optional
         Window sizes in samples. Defaults to the standard FDNkit grid, which
         starts at 4. Every scale must be at least ``order + 2``. A scale
@@ -73,8 +78,9 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     Raises
     ------
     ValueError
-        If any scale is below ``order + 2``, the signal is shorter than twice
-        the smallest scale, or fewer than two scales fit inside the signal.
+        If the signal is not 1-D or contains ``nan`` or ``inf``; if any scale
+        is below ``order + 2``, the signal is shorter than twice the smallest
+        scale, or fewer than two scales fit inside the signal.
 
     Warns
     -----
@@ -90,7 +96,7 @@ def dfa(signal, scales=None, order: int = 1, rel_floor: float = 1e-3) -> DFAResu
     """
     eps = np.finfo(float).eps
     scales = _validate_scales(DEFAULT_SCALES if scales is None else scales, order)
-    x = np.asarray(signal, dtype=float).ravel()
+    x = _as_signal(signal)
     _check_signal_length(x, scales)
 
     rms_per_scale = _fluctuations(x, scales, order, rel_floor=rel_floor)

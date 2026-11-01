@@ -51,6 +51,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   two scales fit, which left `hurst` as `nan`, both functions now raise a
   `ValueError` instead. The length check is shared by the two functions, which
   previously duplicated it.
+- `dfa` and `mfdfa` now reject a signal containing `nan` or `inf`, and a
+  multi-channel array, with a `ValueError` that says what to do instead.
+  A single `nan` anywhere in the input made every output `nan` with no
+  message from FDNkit, because the cumulative profile carries it into every
+  window; dropped samples and rejected artifacts are routinely stored as
+  `nan`, so this was an ordinary input, not a corner case. The error counts
+  the non-finite samples and gives the position of the first. An array of
+  shape `(n_channels, n_samples)` was flattened into one long series, so an
+  8-channel recording returned a single exponent that belonged to no
+  channel; it is now rejected with a pointer to per-channel analysis and to
+  `fdnkit.features`. Singleton axes such as `(1, n)` and `(n, 1)` are still
+  accepted. `dfa_features` and `mfdfa_features` keep summarising the
+  channels that are finite, as they always did, and now name the channels
+  they skip in a `RuntimeWarning` instead of dropping them silently.
 - Type hints that would have been wrong once visible downstream.
   `segment` and `sliding_windows` declared `step: int = None` and
   `min_size: int = None`, so a user passing the documented default `step=None`

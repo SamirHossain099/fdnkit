@@ -13,6 +13,8 @@ sparseness, hub concentration, ...) that callers can opt into.
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -41,13 +43,38 @@ def _clean_channels(signals):
     return x
 
 
+def _finite_channels(x, what: str) -> np.ndarray:
+    """Indices of the channels of ``x`` that hold only finite samples.
+
+    :func:`fdnkit.dfa.dfa` and :func:`fdnkit.mfdfa.mfdfa` reject a signal
+    containing ``nan`` or ``inf``, because one such sample makes the whole
+    estimate ``nan``. The per-channel summaries here have always described
+    the channels that produced a finite exponent, so a channel that cannot
+    produce one is left out of the summary rather than aborting the trial,
+    and a ``RuntimeWarning`` names it so the omission is not silent.
+    """
+    finite = np.isfinite(x).all(axis=1)
+    skipped = np.flatnonzero(~finite)
+    if skipped.size:
+        warnings.warn(
+            f"{what}: skipping channel(s) {skipped.tolist()} because they contain nan "
+            f"or inf; the summary covers the remaining {int(finite.sum())} of "
+            f"{x.shape[0]} channel(s). Interpolate or drop the affected samples, or "
+            "remove the channel, to silence this warning.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+    return np.flatnonzero(finite)
+
+
 def dfa_features(signals, scales=None, order: int = 1, prefix: str = "DFA") -> dict:
     """Per-channel DFA Hurst, summarized across channels.
 
     Returns ``{<prefix>_H_mean, <prefix>_H_std, <prefix>_H_max, <prefix>_H_min}``.
     """
     x = _clean_channels(signals)
-    h = np.array([dfa(x[i], scales=scales, order=order).hurst for i in range(x.shape[0])])
+    channels = _finite_channels(x, "dfa_features")
+    h = np.array([dfa(x[i], scales=scales, order=order).hurst for i in channels])
     h = h[np.isfinite(h)]
     if h.size == 0:
         return {}
@@ -67,7 +94,7 @@ def mfdfa_features(signals, scales=None, q=None, order: int = 1, prefix: str = "
     """
     x = _clean_channels(signals)
     hq_means, deltas, hq_all = [], [], []
-    for i in range(x.shape[0]):
+    for i in _finite_channels(x, "mfdfa_features"):
         res = mfdfa(x[i], scales=scales, q=q, order=order)
         finite = res.hq[np.isfinite(res.hq)]
         if finite.size == 0:

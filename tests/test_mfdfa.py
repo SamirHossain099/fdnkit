@@ -217,3 +217,28 @@ def test_mfdfa_warns_when_a_scale_exceeds_the_signal():
 def test_mfdfa_raises_when_fewer_than_two_scales_fit():
     with pytest.raises(ValueError, match="at least two"):
         mfdfa(fgn(64, 0.7, seed=5), scales=[16, 100, 200])
+
+
+def test_mfdfa_rejects_nan_with_a_count_and_a_position():
+    x = fgn(2048, 0.7, seed=11)
+    x[700] = np.nan
+    with pytest.raises(ValueError, match=r"1 non-finite sample\(s\) \(1 nan, 0 inf\), first at index 700"):
+        mfdfa(x)
+    with pytest.raises(ValueError, match="non-finite"):
+        generalized_hurst(x)
+    with pytest.raises(ValueError, match="non-finite"):
+        delta_hq(x)
+
+
+def test_mfdfa_rejects_a_multichannel_array_instead_of_flattening_it():
+    rng = np.random.default_rng(0)
+    signals = rng.standard_normal((4, 3000))
+    with pytest.raises(ValueError, match=r"must be 1-D, got shape \(4, 3000\)"):
+        mfdfa(signals)
+
+
+def test_mfdfa_squeezes_singleton_axes():
+    x = fgn(2048, 0.7, seed=12)
+    expected = mfdfa(x)
+    np.testing.assert_array_equal(mfdfa(x[None, :]).hq, expected.hq)
+    np.testing.assert_array_equal(mfdfa(x[:, None]).hq, expected.hq)

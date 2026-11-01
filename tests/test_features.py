@@ -1,5 +1,8 @@
+import warnings
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from fdnkit.features import (
     CORE_FEATURES,
@@ -65,3 +68,34 @@ def test_feature_table_missing_signals_raises():
 
     with pytest.raises(KeyError):
         feature_table([{"trial_id": "x"}])
+
+
+def test_channel_with_nan_is_skipped_with_a_warning_not_silently():
+    # dfa and mfdfa now reject nan, so the per-channel summaries must say
+    # which channel they left out, and the rest of the trial must still be
+    # summarised exactly as if that channel had not been supplied.
+    sig = _demo_signal()
+    bad = sig.copy()
+    bad[2, 400] = np.nan
+    clean = np.delete(sig, 2, axis=0)
+    with pytest.warns(RuntimeWarning, match=r"dfa_features: skipping channel\(s\) \[2\]"):
+        f_bad = dfa_features(bad)
+    assert f_bad == dfa_features(clean)
+    with pytest.warns(RuntimeWarning, match=r"mfdfa_features: skipping channel\(s\) \[2\]"):
+        f_bad = mfdfa_features(bad)
+    assert f_bad == mfdfa_features(clean)
+
+
+def test_all_channels_non_finite_returns_empty_features():
+    sig = np.full((3, 1500), np.nan)
+    with pytest.warns(RuntimeWarning, match="remaining 0 of 3"):
+        assert dfa_features(sig) == {}
+    with pytest.warns(RuntimeWarning, match="remaining 0 of 3"):
+        assert mfdfa_features(sig) == {}
+
+
+def test_finite_signals_do_not_warn():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        dfa_features(_demo_signal())
+        mfdfa_features(_demo_signal())

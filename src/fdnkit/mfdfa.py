@@ -136,6 +136,53 @@ def _check_signal_length(x, scales):
         )
 
 
+def _as_signal(signal) -> np.ndarray:
+    """Return ``signal`` as a finite 1-D float array, or explain why it cannot be one.
+
+    Two kinds of input used to pass through silently and produce an answer
+    that was not an estimate of anything.
+
+    A single ``nan`` or ``inf`` anywhere in the signal makes every output
+    ``nan``: DFA integrates the signal into a cumulative profile, so one
+    non-finite sample propagates to every window, every fluctuation and every
+    exponent, and NumPy does not warn when ``nan`` propagates through
+    arithmetic. Dropped samples and rejected artifacts are commonly marked
+    ``nan`` in EEG pipelines, so this is an ordinary input, not a corner
+    case, and it is rejected with a count and a position.
+
+    A multi-channel array of shape ``(n_channels, n_samples)`` was flattened
+    into one series by ``ravel``, concatenating the channels end to end and
+    returning an exponent that belongs to no channel. Only a 1-D signal is
+    accepted; singleton axes such as ``(1, n)`` and ``(n, 1)`` are squeezed
+    because they carry one series unambiguously.
+    """
+    x = np.squeeze(np.asarray(signal, dtype=float))
+    if x.ndim == 0:
+        x = x.reshape(1)
+    if x.ndim != 1:
+        flat = int(np.prod(x.shape))
+        raise ValueError(
+            f"signal must be 1-D, got shape {x.shape}. A multi-channel array is not "
+            f"analysed per channel: it would be flattened into one series of {flat} "
+            "samples whose exponent belongs to no channel. Pass one channel at a time, "
+            "or use fdnkit.features.dfa_features / mfdfa_features for an "
+            "(n_channels, n_samples) array."
+        )
+    bad = ~np.isfinite(x)
+    if bad.any():
+        n_nan = int(np.isnan(x).sum())
+        n_inf = int(bad.sum()) - n_nan
+        first = int(np.flatnonzero(bad)[0])
+        raise ValueError(
+            f"signal contains {int(bad.sum())} non-finite sample(s) ({n_nan} nan, {n_inf} inf), "
+            f"first at index {first} of {x.size}. DFA integrates the signal into a cumulative "
+            "profile, so a single non-finite sample makes every fluctuation and exponent nan. "
+            "Interpolate or drop the affected samples before calling, or analyse the finite "
+            "segments separately."
+        )
+    return x
+
+
 def _fluctuations(signal, scales, order, rel_floor: float = 1e-3):
     """Local detrended RMS fluctuations for each scale (q=2 base quantities).
 
@@ -212,7 +259,11 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     Parameters
     ----------
     signal : array-like
-        1-D time series.
+        1-D time series of finite values. A multi-channel array is rejected
+        rather than flattened; analyse one channel at a time or use
+        :func:`fdnkit.features.mfdfa_features`. ``nan`` and ``inf`` are
+        rejected because the cumulative profile would carry them into every
+        window and every exponent.
     scales : array-like, optional
         Window sizes (in samples). Defaults to
         ``[4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]``. Every scale
@@ -244,8 +295,9 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     Raises
     ------
     ValueError
-        If any scale is below ``order + 2``, the signal is shorter than twice
-        the smallest scale, or fewer than two scales fit inside the signal.
+        If the signal is not 1-D or contains ``nan`` or ``inf``; if any scale
+        is below ``order + 2``, the signal is shorter than twice the smallest
+        scale, or fewer than two scales fit inside the signal.
 
     Warns
     -----
@@ -264,7 +316,7 @@ def mfdfa(signal, scales=None, q=None, order: int = 1, rel_floor: float = 1e-3,
     scales = _validate_scales(DEFAULT_SCALES if scales is None else scales, order)
     q = DEFAULT_Q if q is None else np.asarray(q, dtype=float)
 
-    x = np.asarray(signal, dtype=float).ravel()
+    x = _as_signal(signal)
     _check_signal_length(x, scales)
 
     if check_flat and np.any(q < 0):

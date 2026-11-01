@@ -24,6 +24,16 @@ grid reaches 256 samples, so a one-second window needs a sampling rate of at
 least 256 Hz to use it in full; shorter windows should pass a smaller `scales`.
 Fewer than two usable scales leave no slope to fit and raise a `ValueError`.
 
+The signal itself must be one-dimensional and finite. A `nan` or `inf`
+anywhere in it enters the cumulative profile and from there every window, so
+the result would be `nan` throughout; `dfa` and `mfdfa` raise a `ValueError`
+that counts the offending samples and gives the position of the first, since
+dropped samples and rejected artifacts are often stored as `nan`. A
+multi-channel array of shape `(n_channels, n_samples)` is also rejected rather
+than flattened into one long series: analyse channels one at a time, or use
+`fdnkit.features.dfa_features` and `mfdfa_features`, which summarise per
+channel and skip, with a warning, any channel that is not finite.
+
 ## Multifractal DFA (MFDFA)
 
 MFDFA generalizes the second step to arbitrary moment orders `q`:
