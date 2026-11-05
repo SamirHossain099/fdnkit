@@ -83,6 +83,54 @@ def test_single_class_rejected():
         classify(X, np.zeros(10), groups=np.arange(10))
 
 
+def _imbalanced_dataset(seed=0):
+    """Six subjects, 70% positive, with a weak real signal on one feature."""
+    rng = np.random.default_rng(seed)
+    g = np.repeat(np.arange(6), 10)
+    y = np.tile([0, 0, 0, 1, 1, 1, 1, 1, 1, 1], 6)
+    X = rng.standard_normal((60, 3))
+    X[:, 0] += 1.5 * y
+    return X, y, g
+
+
+@pytest.mark.parametrize(
+    "encode",
+    [
+        lambda y: y + 1,
+        lambda y: 2 * y - 1,
+        lambda y: np.where(y == 1, "seizure", "rest"),
+        lambda y: y.astype(float),
+    ],
+    ids=["1/2", "-1/+1", "strings", "float"],
+)
+def test_metrics_do_not_depend_on_label_encoding(encode):
+    # Relabelling the two classes, keeping their order, cannot change any
+    # metric. Labels of -1/+1 used to give a majority baseline of 0.6 here
+    # instead of 0.7, and 1/2 gave 1.7.
+    X, y, g = _imbalanced_dataset()
+    ref = classify(X, y, groups=g, cv="loso", n_permutations=50)
+    res = classify(X, encode(y), groups=g, cv="loso", n_permutations=50)
+    assert ref.majority_baseline == pytest.approx(0.7)
+    for attr in ("accuracy", "balanced_accuracy", "auc", "majority_baseline",
+                 "permutation_p", "permutation_chance", "ci95", "per_group"):
+        assert getattr(res, attr) == getattr(ref, attr), attr
+
+
+def test_classify_dataframe_accepts_string_labels():
+    X, y, g = _imbalanced_dataset()
+    df = pd.DataFrame(X, columns=["f0", "f1", "f2"])
+    df["label"] = np.where(y == 1, "seizure", "rest")
+    df["group"] = g
+    res = classify_dataframe(df, cv="loso", permutation=False)
+    assert res.majority_baseline == pytest.approx(0.7)
+
+
+def test_multiclass_rejected():
+    X, _, g = _imbalanced_dataset()
+    with pytest.raises(ValueError, match="binary"):
+        classify(X, np.tile([0, 1, 2], 20), groups=g, permutation=False)
+
+
 def test_make_classifier_is_fittable():
     clf = make_classifier()
     X = np.random.default_rng(0).standard_normal((20, 3))

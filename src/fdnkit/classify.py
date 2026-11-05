@@ -140,7 +140,9 @@ def classify(
     ----------
     X : array-like, shape (n_trials, n_features)
     y : array-like, shape (n_trials,)
-        Binary labels.
+        Binary labels, in any encoding with exactly two distinct values (``0/1``,
+        ``1/2``, ``-1/+1``, or strings such as ``"rest"/"seizure"``). The label
+        that sorts last is the positive class for ROC-AUC.
     groups : array-like, optional
         Group (e.g. subject) id per trial. **Required** for ``cv in
         {"loso", "group_kfold"}``.
@@ -166,13 +168,21 @@ def classify(
     ClassificationResult
     """
     X = np.asarray(X, dtype=float)
-    y = np.asarray(y).astype(int)
+    y = np.asarray(y)
     if X.ndim != 2:
         raise ValueError("X must be 2-D (n_trials, n_features)")
-    if y.shape[0] != X.shape[0]:
+    if y.ndim != 1 or y.shape[0] != X.shape[0]:
         raise ValueError("X and y length mismatch")
-    if len(np.unique(y)) < 2:
+    # Encode to 0/1. Everything below, the majority baseline included, assumes
+    # that encoding, so labels such as -1/+1 must not reach it as given.
+    classes, y = np.unique(y, return_inverse=True)
+    if len(classes) < 2:
         raise ValueError("need both classes present in y")
+    if len(classes) > 2:
+        raise ValueError(
+            f"classify is binary, but y has {len(classes)} distinct labels: "
+            f"{classes.tolist()[:10]}"
+        )
 
     est = make_classifier() if estimator is None else estimator
     cv = cv.lower()

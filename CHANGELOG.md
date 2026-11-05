@@ -71,6 +71,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   would get a false error from their type checker. They are now `int | None`,
   and both functions declare their return types. `mfdfa_features` reused one
   variable name for a list and an array; the array now has its own name.
+- `classify` now accepts binary labels in any encoding and reports the same
+  result for all of them. It cast `y` to `int` and computed the majority
+  baseline as `max(mean(y), 1 - mean(y))`, which only holds for `0/1`. On a
+  70% positive dataset, labels of `-1/+1` gave a baseline of 0.6 instead of
+  0.7, a plausible number that made the classifier look further above chance
+  than it was; `1/2` gave an impossible 1.7. String labels such as
+  `"rest"/"seizure"`, the natural column type for `classify_dataframe`, failed
+  with an `int()` conversion error. Labels are now encoded to `0/1` internally,
+  with the label that sorts last as the positive class for ROC-AUC. A label
+  column with three or more classes, which previously ran and returned an AUC
+  of `nan` with a wrong baseline, now raises a `ValueError`.
 
 ### Changed
 - `FODN.fit` solves the ADMM-LASSO unknown-input step for every timepoint in
